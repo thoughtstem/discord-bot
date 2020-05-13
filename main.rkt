@@ -1,4 +1,4 @@
-#lang racket 
+#lang at-exp racket 
 
 (provide 
   bot
@@ -6,6 +6,11 @@
   discord-key
 
   echo
+
+  run-js
+
+  messaging-user-name
+  messaging-user-id
 
   ;message->command 
   ;message->args
@@ -85,7 +90,9 @@
 (define (rules->call h k)
   (hash-ref h k 
 	    (thunk* (thunk* 
-		      (~a "Command not found: " k)))))
+		      (~a "Command not found: " k))))
+  
+  )
 
 
 ;Probably should be called run-bot
@@ -108,7 +115,7 @@
 
       ;Handle images here...
 
-      [else (void)] ;Doesn't trigger a reply
+      [else (void)] ;Doesn't trigger a reply.  Empty messages don't send.
       )
   )
 
@@ -134,6 +141,9 @@
 			    msg))
 
 		        (define current-bound-func
+			  (match current-cmd
+				 [cmd bound-func] ...)
+			  #;
 			  (rules->call 
 			    (apply hash 
 			      (flatten (list (list cmd bound-func) ...)))
@@ -142,5 +152,57 @@
 			(apply current-bound-func (message->args msg)))
 
 		      f))
+
+(define (run-js . strings)
+  (define program
+    @~a{
+    const Discord = require('discord.js');
+    const fs = require('fs');
+    const client = new Discord.Client();
+    const { exec } = require("child_process")
+
+    const config = require("./config.json");
+    client.login(config.token);
+
+    client.on('ready', () => {
+              @(string-join strings " ")
+    })
+
+   }
+  )
+
+ ;Save to file and run...
+ (define cmd.js
+   (~a "bot/cmd-" (random 1000) ".js"))
+
+ (with-output-to-file cmd.js
+   (thunk*
+     (displayln program)))
+
+ ;I kind of want to call this in a thread, but when we do, the main.rkt returns early and I guess the thread gets killed.
+ (system (~a "node " cmd.js))
+)
+
+;Ugly atm
+(define (messaging-user-name)
+  (string-replace
+    (first ;name
+      (string-split
+	(first
+	  (vector->list
+	    (current-command-line-arguments)))
+	"-"))
+    "bot/data/" ""))
+
+;Ugly atm
+(define (messaging-user-id)
+  (string-replace
+    (third ;id
+      (string-split
+	(first
+	  (vector->list
+	    (current-command-line-arguments)))
+	"-"))
+    ".txt" ""))
 
 
