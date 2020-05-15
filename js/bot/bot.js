@@ -28,11 +28,7 @@ client.on('message', msg => {
 				exec( "racket main.rkt " + "bot/data/" + full
 					, (error, stdout, stderr) => {
 
-						//msg.reply(stdout, {files: ["data/" + full + ".png"]});
-						
-				
-						if(!stdout.match("Command not found:"))
-    msg.reply(stdout);
+						if(!stdout.match("Command not found:") && stdout != "") doReply(msg, stdout);
 
 						if (error) {
 							console.log(`error: ${error.message}`);
@@ -51,6 +47,24 @@ client.on('message', msg => {
 
 	}
 });
+
+function doReply(msg, s){
+ var files = extractFiles(s);
+ msg.reply(omitFiles(s), {files: files});
+}
+
+function omitFiles(s){
+ return s.replace(/FILE:\S*/g, "");
+}
+
+function extractFiles(s){
+  //["data/" + full + ".png"]
+  var matches = s.match(/FILE:\S*/g) || []
+
+  return matches.map((x)=>{
+     return "bot/data/" + x.replace("FILE:","")
+   })
+}
 
 const config = require("./config.json");
 client.login(config.token);

@@ -10,13 +10,11 @@
   run-js
 
   messaging-user-name
+  messaging-user-full-message
   messaging-user-id
 
-  ;message->command 
-  ;message->args
-  ;rules->call
-  ;test-bot
-  ;command-line-bot
+  session-store
+  session-load
   )
 
 (require racket/runtime-path)
@@ -90,9 +88,7 @@
 (define (rules->call h k)
   (hash-ref h k 
 	    (thunk* (thunk* 
-		      (~a "Command not found: " k))))
-  
-  )
+		      (~a "Command not found: " k)))))
 
 
 ;Probably should be called run-bot
@@ -104,20 +100,39 @@
 		   (f msg)))
 
 
-    ;If it's an image,
-    ;  write to a file.
-    ;Etc.  Handle special return
-    ;  types here
-    ;(displayln reply)
+    (display (->discord-reply reply)))
 
-    (cond
-      [(string? reply) (displayln reply)] 
 
-      ;Handle images here...
+(define (->discord-reply reply)
+  (local-require
+    (only-in
+      2htdp/image image? save-image))
 
-      [else (void)] ;Doesn't trigger a reply.  Empty messages don't send.
-      )
-  )
+  ;If it's an image,
+  ;  write to a file.
+  ;Etc.  Handle special return
+  ;  types here
+  ;(displayln reply)
+  (cond
+    [(string? reply) reply] 
+    [(symbol? reply) (~a "`"(pretty-format reply)"`")] 
+    [(list? reply) 
+     (string-join
+       (map ->discord-reply reply)
+       "\n")] 
+    [(image? reply) 
+     (let ()
+       (define name (~a (random 1000000) ".png"))
+       (define path
+	 (build-path "bot" "data" name))
+       (save-image reply path)
+       (~a "FILE:" name))
+     ] 
+
+    ;Handle images here...
+
+    [else ""] ;Doesn't trigger a reply.  Empty messages don't send.
+    ))
 
 (define (command-line-bot b)
   (test-bot b 
@@ -205,4 +220,27 @@
 	"-"))
     ".txt" ""))
 
+;Ugly atm
+(define (messaging-user-full-message)
+  (file->string
+    (first
+      (vector->list
+	(current-command-line-arguments)))))
+
+
+;STATE/SESSIONS
+
+(define (session-store username key val)
+  (define session-dir (build-path "bot" "data" username)) 
+
+  (make-directory* session-dir)
+
+  (with-output-to-file #:exists 'replace
+		       (build-path session-dir (~a key))
+		       (thunk*
+			 (write val))))
+
+(define (session-load username key)
+  (define key-file (build-path "bot" "data" username (~a key))) 
+  (read (open-input-file key-file)))
 
