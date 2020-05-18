@@ -17,6 +17,9 @@
   session-load
 
   help-link ;All bots should have a link to their docs that they can return if a user types ! help
+
+  message->command 
+  message->args
   )
 
 (require racket/runtime-path)
@@ -239,19 +242,6 @@
 	    (first args)
 	    "-"))
 	".txt" "")))
-
-;Ugly atm
-#;
-(define (messaging-user-full-message)
-  (define args 
-    (vector->list
-      (current-command-line-arguments)))
-
-
-  (if (empty? args)
-      "no-message"
-      (file->string
-	(first args))))
 
 
 ;STATE/SESSIONS
