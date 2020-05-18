@@ -97,11 +97,43 @@
 	    ))
 	))))
 
+
+;PARSING
+
+(define (is-mention? s)
+  (string-prefix? s "<@!"))
+
+(define (mention->id s)
+  (regexp-replaces s
+    '([#rx"<@!" ""]
+      [#rx">" ""])))
+
+(define (message->mentioned-bot msg)
+  (define maybe-cmd
+    (first (string-split msg " ")))
+
+  (if (is-mention? maybe-cmd)
+      (mention->id maybe-cmd) ; It is not a cmd, it is a mention 
+      #f))
+
 (define (message->command msg)
-  (first (string-split msg " ")))
+  (define maybe-cmd
+    (first (string-split msg " ")))
+
+  (if (is-mention? maybe-cmd)
+      (second (string-split msg " "))
+      maybe-cmd))
 
 (define (message->args msg)
-  (rest (string-split msg " ")))
+  (define maybe-cmd
+    (first (string-split msg " ")))
+
+  (if (is-mention? maybe-cmd)
+      (drop (string-split msg " ") 2)
+      (drop (string-split msg " ") 1)))
+
+
+;END PARSING
 
 (define (rules->call h k)
   (hash-ref h k 
