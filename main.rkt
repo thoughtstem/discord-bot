@@ -15,16 +15,34 @@
 
   session-store
   session-load
+
+  help-link ;All bots should have a link to their docs that they can return if a user types ! help
   )
 
 (require racket/runtime-path)
 
 (define-runtime-path bot-runtime "js/bot")
 
-(define discord-key (make-parameter #f))
+
+(define (try-to-find-discord-key)
+  (define usual-place (build-path 
+			(current-directory)
+			".discord-key"))
+  (if (file-exists? usual-place)
+      (begin
+	;(string-trim (file->string usual-place))
+	(string-trim (file->string usual-place))
+	)
+      #f))
+
+(define discord-key (make-parameter (try-to-find-discord-key)))
 
 (define (echo . args)
   (string-join args " "))
+
+(define (help-link link)
+  (thunk
+    (~a "You can find my docs here: " link)))
 
 ;Put this at the end of your bot file to make your bot rkt into a launcher,
 ;  e.g. racket bot.rkt would run the bot
