@@ -172,16 +172,11 @@
 
 			  (define current-bound-func
 			    (match current-cmd
-				   [cmd bound-func] ...)
-			    #;
-			    (rules->call 
-			      (apply hash 
-				     (flatten (list (list cmd bound-func) ...)))
-			      current-cmd))
+				   [cmd bound-func] ...))
 
-			  (apply current-bound-func (message->args msg)))
+			  (apply current-bound-func (message->args msg))))
 
-			f)))
+			f))
 
 (define (run-js . strings)
   (define program
