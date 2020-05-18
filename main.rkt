@@ -126,7 +126,13 @@
     (first (string-split msg " ")))
 
   (if (is-mention? maybe-cmd)
-      (second (string-split msg " "))
+      (let()
+	(define l (string-split msg " "))
+
+	(when (> 2 (length l))
+	  (error "You mentioned a bot, but there was no command afterward.  The general syntax is `!@SomeBot some-command some various args`"))
+
+	(second l))
       maybe-cmd))
 
 (define (message->args msg)
