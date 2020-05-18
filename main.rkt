@@ -30,9 +30,7 @@
 			".discord-key"))
   (if (file-exists? usual-place)
       (begin
-	;(string-trim (file->string usual-place))
-	(string-trim (file->string usual-place))
-	)
+	(string-trim (file->string usual-place)))
       #f))
 
 (define discord-key (make-parameter (try-to-find-discord-key)))
@@ -49,7 +47,6 @@
 (define-syntax-rule (launch-bot b)
     (begin
       (module+ main
-
 	       (when (not (discord-key))
 		 (error "You need to specify your bot API key with the (discord-key) parameter"))
 
@@ -168,23 +165,23 @@
 (define-syntax-rule (bot [cmd bound-func] ...)
 		    (let ()
 		      (define (f msg)
+			(parameterize ([messaging-user-full-message msg])
+			  (define current-cmd
+			    (message->command 
+			      msg))
 
-			(define current-cmd
-			  (message->command 
-			    msg))
+			  (define current-bound-func
+			    (match current-cmd
+				   [cmd bound-func] ...)
+			    #;
+			    (rules->call 
+			      (apply hash 
+				     (flatten (list (list cmd bound-func) ...)))
+			      current-cmd))
 
-		        (define current-bound-func
-			  (match current-cmd
-				 [cmd bound-func] ...)
-			  #;
-			  (rules->call 
-			    (apply hash 
-			      (flatten (list (list cmd bound-func) ...)))
-			    current-cmd))
+			  (apply current-bound-func (message->args msg)))
 
-			(apply current-bound-func (message->args msg)))
-
-		      f))
+			f)))
 
 (define (run-js . strings)
   (define program
@@ -213,37 +210,53 @@
      (displayln program)))
 
  ;I kind of want to call this in a thread, but when we do, the main.rkt returns early and I guess the thread gets killed.
- (system (~a "node " cmd.js))
-)
+ (system (~a "node " cmd.js)))
+
+
+(define messaging-user-full-message (make-parameter "no-message"))
 
 ;Ugly atm
 (define (messaging-user-name)
-  (string-replace
-    (first ;name
-      (string-split
-	(first
-	  (vector->list
-	    (current-command-line-arguments)))
-	"-"))
-    "bot/data/" ""))
+  (define args 
+    (vector->list
+      (current-command-line-arguments)))
+
+  (if (empty? args)
+      "unknown-user"
+      (string-replace
+	(first ;name
+	  (string-split
+	    (first args)
+	    "-"))
+	"bot/data/" "")))
 
 ;Ugly atm
 (define (messaging-user-id)
-  (string-replace
-    (third ;id
-      (string-split
-	(first
-	  (vector->list
-	    (current-command-line-arguments)))
-	"-"))
-    ".txt" ""))
+  (define args 
+    (vector->list
+      (current-command-line-arguments)))
+
+  (if (empty? args)
+      "unknown-id"
+      (string-replace
+	(third ;id
+	  (string-split
+	    (first args)
+	    "-"))
+	".txt" "")))
 
 ;Ugly atm
+#;
 (define (messaging-user-full-message)
-  (file->string
-    (first
-      (vector->list
-	(current-command-line-arguments)))))
+  (define args 
+    (vector->list
+      (current-command-line-arguments)))
+
+
+  (if (empty? args)
+      "no-message"
+      (file->string
+	(first args))))
 
 
 ;STATE/SESSIONS
