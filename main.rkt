@@ -15,6 +15,7 @@
 
   session-store
   session-load
+  session-clear
 
   help-link ;All bots should have a link to their docs that they can return if a user types ! help
 
@@ -310,4 +311,15 @@
 (define (session-load username key)
   (define key-file (build-path "bot" "data" username (~a key))) 
   (read (open-input-file key-file)))
+
+
+(define (session-clear username)
+  (define session-dir (build-path "bot" "data" username)) 
+
+  (delete-directory/files session-dir
+			  #:must-exist? #f))
+
+
+
+
 
