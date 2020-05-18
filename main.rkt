@@ -20,6 +20,11 @@
 
   message->command 
   message->args
+  message->mentioned-bot 
+
+  current-command
+  current-args
+  current-mentioned-bot
   )
 
 (require racket/runtime-path)
@@ -192,6 +197,10 @@
 		  (current-command-line-arguments))))))
 
 
+(define current-command (make-parameter #f))
+(define current-args (make-parameter #f))
+(define current-mentioned-bot (make-parameter #f))
+
 ;A bot is just a function that takes strings, parses out their commands,
 ;  and calls predefined functions on their args, depending on the command.
 ;[Basically it handles messages that get chatted at it.  
@@ -200,16 +209,20 @@
 (define-syntax-rule (bot [cmd bound-func] ...)
 		    (let ()
 		      (define (f msg)
-			(parameterize ([messaging-user-full-message msg])
-			  (define current-cmd
-			    (message->command 
-			      msg))
+			(define current-cmd (message->command msg))
+			(define args (message->args msg))
+			(define mentioned-bot (message->mentioned-bot msg))
+
+			(parameterize ([messaging-user-full-message msg]
+				       [current-command current-cmd]
+				       [current-args args]
+				       [current-mentioned-bot mentioned-bot])
 
 			  (define current-bound-func
 			    (match current-cmd
 				   [cmd bound-func] ...))
 
-			  (apply current-bound-func (message->args msg))))
+			  (apply current-bound-func args)))
 
 			f))
 
