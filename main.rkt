@@ -26,6 +26,8 @@
   current-command
   current-args
   current-mentioned-bot
+
+  is-mention?
   )
 
 (require racket/runtime-path)
