@@ -55,38 +55,56 @@
 
 ;Put this at the end of your bot file to make your bot rkt into a launcher,
 ;  e.g. racket bot.rkt would run the bot
-(define-syntax-rule (launch-bot b)
-    (begin
-      (module+ main
-	       (when (not (discord-key))
-		 (error "You need to specify your bot API key with the (discord-key) parameter"))
+(require syntax/parse/define)
+(define-syntax (launch-bot stx)
+  (syntax-parse stx 
+    [(_ b flags ...)
+     #'(begin
+	 (module+ main
+		  (launch-bot-function b flags ...)))]))
 
-	       (define args 
-		 (vector->list
-		   (current-command-line-arguments)))
+(define (launch-bot-function b #:persist [persist #f])
+  (when (not (discord-key))
+    (error "You need to specify your bot API key with the (discord-key) parameter"))
 
-	       (if (empty? args)
-		   (begin
-		     (copy-bot-runtime-to (current-directory))
-		     (system "node bot/bot.js"))
-		   (command-line-bot b)))))
+  (define args 
+    (vector->list
+      (current-command-line-arguments)))
+
+  (if (empty? args)
+      (begin
+	(copy-bot-runtime-to (current-directory)
+			     #:persist persist)
+	(system "node bot/bot.js"))
+      (command-line-bot b)))
 
 
 ;Note: Storing the JS runtime in the user's working directory
 ;  has some pros and cons.
 ;We probably want to be able to hide the ugly JS stuff from the user...
-(define (copy-bot-runtime-to place)
+(define (copy-bot-runtime-to place #:persist [persist #f])
   (define target
     (build-path place "bot"))
+
+  (define archived-bot-directory
+    (build-path place (~a "archived-bot-" (random 10000))))
 
   (when (directory-exists? target)
     (rename-file-or-directory
       target
-      (build-path place (~a "archived-bot-" (random 10000)))))
+      archived-bot-directory))
 
   (copy-directory/files 
     bot-runtime
     target)
+
+  (when (and persist 
+	     (directory-exists? archived-bot-directory))
+    (delete-directory/files #:must-exist? #f
+      (build-path target "data"))
+    (copy-directory/files
+      (build-path archived-bot-directory "data") 
+      (build-path target "data")))
   
   (give-credentials-to-node.js target)
   )
