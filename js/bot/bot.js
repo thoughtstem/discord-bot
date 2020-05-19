@@ -8,7 +8,6 @@ client.on('ready', () => {
 });
 
 client.on('message', msg => {
-
 	if (msg.content.split("")[0] === config.prefix) {
 
 		var cmd = msg.content.replace(/!/, "")
@@ -16,7 +15,8 @@ client.on('message', msg => {
 		var u = msg.author.username
 		var d = msg.author.discriminator
 		var i = msg.author.id
-		var full = u+"-"+d+"-"+i+".txt"
+		var mi = msg.member ? msg.member.id : "NOT_A_MEMBER"
+		var full = u+"-"+d+"-"+i+"-"+mi+".txt"
 		fs.writeFile("bot/data/"+full,
 			cmd,
 			function(err){

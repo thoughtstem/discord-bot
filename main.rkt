@@ -12,6 +12,7 @@
   messaging-user-name
   messaging-user-full-message
   messaging-user-id
+  messaging-user-member-id
 
   session-store
   session-load
@@ -28,6 +29,8 @@
   current-mentioned-bot
 
   is-mention?
+
+  ensure-messaging-user-has-role-on-server! 
   )
 
 (require racket/runtime-path)
@@ -265,7 +268,7 @@
     client.login(config.token);
 
     client.on('ready', () => {
-              @(string-join strings " ")
+              @(string-join strings "")
     })
 
    }
@@ -315,6 +318,20 @@
 	    "-"))
 	".txt" "")))
 
+;Ugly atm
+(define (messaging-user-member-id)
+  (define args 
+    (vector->list
+      (current-command-line-arguments)))
+
+  (if (empty? args)
+      "unknown-member-id"
+      (string-replace
+	(fourth ;member id
+	  (string-split
+	    (first args)
+	    "-"))
+	".txt" "")))
 
 ;STATE/SESSIONS
 
@@ -348,5 +365,39 @@
 
 
 
+(define (ensure-messaging-user-has-role-on-server! role-id server-id
+						   #:failure-message (failure-message "Insufficient Roles!"))
+  (define s
+    (with-output-to-string
+      (thunk
+	@run-js{
+	client.guilds
+	.resolve('@server-id').members
+	.fetch('@(messaging-user-member-id)')
+	.then(member => {
+		     var role =
+			member.roles.cache.find(role => {
+						     return role.id == '@role-id'	
+					        })
+		     if(role){
+		       console.log(role.name) 
+		       client.destroy()
+		     } else {
+		       console.log("No Role Found") 
+		       client.destroy()
+		     }
+		 })
+	.catch(err =>  {
+		   console.log(err)
+		   console.log("No User Found") 
+		   client.destroy()
+		   })
+	
+	
+
+	})))
+
+  (when (string=? (string-trim s) "No Role Found")
+    (error failure-message)))
 
 
