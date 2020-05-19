@@ -308,9 +308,16 @@
 		       (thunk*
 			 (write val))))
 
-(define (session-load username key)
+(define (session-load username key [default-value (void)])
   (define key-file (build-path "bot" "data" username (~a key))) 
-  (read (open-input-file key-file)))
+
+
+  (if (and (not (void? default-value))
+	   (not (file-exists? key-file)))
+      default-value
+      (read (open-input-file key-file)))
+  
+  )
 
 
 (define (session-clear username)
