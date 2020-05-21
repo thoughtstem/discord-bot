@@ -147,11 +147,12 @@
 
 (define (message->command msg)
   (define maybe-cmd
-    (first (string-split msg " ")))
+    (first (regexp-split #rx"[ \n]+" (string-trim msg))))
 
   (if (is-mention? maybe-cmd)
       (let()
-	(define l (string-split msg " "))
+	(define l 
+	  (regexp-split #rx"[ \n]+" (string-trim msg)))
 
 	(when (> 2 (length l))
 	  (error "You mentioned a bot, but there was no command afterward.  The general syntax is `!@SomeBot some-command some various args`"))
@@ -392,12 +393,35 @@
 		   console.log("No User Found") 
 		   client.destroy()
 		   })
-	
-	
-
 	})))
 
   (when (string=? (string-trim s) "No Role Found")
     (error failure-message)))
+
+
+(module+ test
+  (require rackunit) 
+
+  (check-equal?
+    (message->command "try\n(circle 30 'solid 'red)")
+    "try")
+
+  (check-equal?
+    (message->command "try (circle 30 'solid 'red)")
+    "try")
+
+  (check-equal?
+    (message->command " try (circle 30 'solid 'red)")
+    "try")
+
+  (check-equal?
+    (message->command "<@!abc> try (circle 30 'solid 'red)")
+    "try")
+
+  (check-equal?
+    (message->command "<@!abc>    try (circle 30 'solid 'red)")
+    "try")
+  )
+
 
 
