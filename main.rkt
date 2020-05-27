@@ -161,12 +161,15 @@
       maybe-cmd))
 
 (define (message->args msg)
+  (define parts
+    (regexp-split #rx"[ ]+" msg))
+
   (define maybe-cmd
-    (first (string-split msg " ")))
+    (first parts))
 
   (if (is-mention? maybe-cmd)
-      (drop (string-split msg " ") 2)
-      (drop (string-split msg " ") 1)))
+      (drop parts 2)
+      (drop parts 1)))
 
 
 ;END PARSING
@@ -401,6 +404,10 @@
 
 (module+ test
   (require rackunit) 
+
+  (check-equal?
+    (message->args "+ 1 2 3   4 5  6")
+    '("1" "2" "3" "4" "5" "6"))
 
   (check-equal?
     (message->command "try\n(circle 30 'solid 'red)")
