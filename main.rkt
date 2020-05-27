@@ -162,7 +162,7 @@
 
 (define (message->args msg)
   (define parts
-    (regexp-split #rx"[ ]+" msg))
+    (regexp-split #rx"[ ]+" (string-trim msg)))
 
   (define maybe-cmd
     (first parts))
@@ -407,6 +407,10 @@
 
   (check-equal?
     (message->args "+ 1 2 3   4 5  6")
+    '("1" "2" "3" "4" "5" "6"))
+
+  (check-equal?
+    (message->args "  + 1 2 3   4 5  6")
     '("1" "2" "3" "4" "5" "6"))
 
   (check-equal?
