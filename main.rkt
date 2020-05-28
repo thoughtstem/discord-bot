@@ -204,6 +204,8 @@
   ;(displayln reply)
   (cond
     [(string? reply) reply] 
+    [(number? reply) (~a reply)] 
+    [(boolean? reply) (~a reply)] 
     [(symbol? reply) (~a "`"(pretty-format reply)"`")] 
     [(list? reply) 
      (string-join
