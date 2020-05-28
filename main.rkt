@@ -29,6 +29,7 @@
   current-mentioned-bot
 
   is-mention?
+  id->mention
 
   ensure-messaging-user-has-role-on-server! 
   )
@@ -131,6 +132,9 @@
 
 (define (is-mention? s)
   (string-prefix? s "<@!"))
+
+(define (id->mention i)
+    (~a "<@!" i ">"))
 
 (define (mention->id s)
   (regexp-replaces s
