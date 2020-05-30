@@ -32,6 +32,8 @@
   id->mention
 
   ensure-messaging-user-has-role-on-server! 
+
+  get-users-from-channel
   )
 
 (require racket/runtime-path)
@@ -406,6 +408,28 @@
 
   (when (string=? (string-trim s) "No Role Found")
     (error failure-message)))
+
+
+(define (get-users-from-channel voice-channel-id)
+  (map id->mention
+       (string-split
+         (with-output-to-string
+           (thunk*
+             @run-js{
+             client.channels
+             .fetch('@voice-channel-id')
+             .then(channel => {
+                           var a = channel.members.keyArray()
+                           for(var i = 0; i < a.length; 
+                                   i++)
+                           {
+                           console.log(a[i])
+                           }
+                           client.destroy()
+                           })
+
+             }
+             "\n")))))
 
 
 (module+ test
