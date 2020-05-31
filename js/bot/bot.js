@@ -7,6 +7,9 @@ client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
+var racketConn = require('net').Socket();
+racketConn.connect(6969);
+
 client.on('message', msg => {
 	if (msg.content.split("")[0] === config.prefix) {
 
@@ -16,35 +19,8 @@ client.on('message', msg => {
 		var d = msg.author.discriminator
 		var i = msg.author.id
 		var mi = msg.member ? msg.member.id : "NOT_A_MEMBER"
-		var full = u+"-"+d+"-"+i+"-"+mi+".txt"
-		fs.writeFile("bot/data/"+full,
-			cmd,
-			function(err){
-				if(err) {
-					return console.log(err);
-				}
 
-				//TODO: Run in thread or something...
-				exec( "racket main.rkt " + "bot/data/" + full
-					, (error, stdout, stderr) => {
-
-						if(!stdout.match("Command not found:") && stdout != "") doReply(msg, stdout);
-
-						if (error) {
-							console.log(`error: ${error.message}`);
-							return;
-						}
-						if (stderr) {
-							console.log(`stderr: ${stderr}`);
-							return;
-						}
-						console.log(`stdout: ${stdout}`);
-					});
-
-			}
-		);
-
-
+    racketConn.write(cmd)
 	}
 });
 
@@ -68,3 +44,6 @@ function extractFiles(s){
 
 const config = require("./config.json");
 client.login(config.token);
+racketConn.end();
+
+

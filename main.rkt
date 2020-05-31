@@ -77,12 +77,34 @@
     (vector->list
       (current-command-line-arguments)))
 
+
+  (start-listening-server)
+
   (if (empty? args)
-      (begin
-	(copy-bot-runtime-to (current-directory)
-			     #:persist persist)
-	(system "node bot/bot.js"))
-      (command-line-bot b)))
+   (begin
+    (copy-bot-runtime-to (current-directory)
+#:persist persist)
+    (system "node bot/bot.js"))
+
+
+   ;Deprecated.  Running a bot now creates a Racket server that listens for stuff coming from bot.js via a socket, not via the command line anymore.
+   (command-line-bot b)))
+
+(define (start-listening-server)
+   (local-require racket/tcp)
+
+   (thread
+    (thunk
+     (define listener (tcp-listen 6969))
+
+     (let echo-server ()
+      (define-values [I O] (tcp-accept listener))
+      (thread
+       (λ()
+        (displayln "Got something")
+        (displayln (read I))
+        (close-output-port O)))
+      (echo-server)))))
 
 
 ;Note: Storing the JS runtime in the user's working directory
