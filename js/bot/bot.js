@@ -7,8 +7,36 @@ client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
-var racketConn = require('net').Socket();
-racketConn.connect(6969);
+//Use pipes (streams??) instead?
+//
+//
+// 
+/*
+var readableStream = fs.createReadStream('from-racket.txt');
+var writableStream = fs.createWriteStream('to-racket.txt');
+
+readableStream.setEncoding('utf8');
+
+readableStream.on('data', function(chunk) {
+    writableStream.write(chunk);
+});
+*/
+
+var net = require('net')
+
+var server = net.createServer(function (socket) {
+  socket.setEncoding("utf8");
+  socket.addListener('data', (data) => {
+    console.log("DATA")
+    var resp = data.toString('utf-8')
+    console.log("Got back from Racket: ", resp);
+  });
+});
+server.listen(6969, "localhost");
+
+var racketConn = net.connect(6969, function(x){
+  console.log("CONNECT", x)
+})
 
 client.on('message', msg => {
 	if (msg.content.split("")[0] === config.prefix) {
@@ -20,9 +48,18 @@ client.on('message', msg => {
 		var i = msg.author.id
 		var mi = msg.member ? msg.member.id : "NOT_A_MEMBER"
 
-    racketConn.write(cmd)
+    console.log("Sending to Racket:",
+      cmd 
+    )
+
+    racketConn.write(cmd.length + " " + cmd)
+    //writableStream.write(cmd.length + " " + cmd)
+
 	}
 });
+
+
+
 
 function doReply(msg, s){
  var files = extractFiles(s);
@@ -44,6 +81,5 @@ function extractFiles(s){
 
 const config = require("./config.json");
 client.login(config.token);
-racketConn.end();
 
 

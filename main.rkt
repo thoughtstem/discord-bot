@@ -1,6 +1,8 @@
 #lang at-exp racket 
 
 (provide 
+  ->discord-reply 
+
   bot
   launch-bot
   discord-key
@@ -33,8 +35,7 @@
 
   ensure-messaging-user-has-role-on-server! 
 
-  get-users-from-channel
-  )
+  get-users-from-channel)
 
 (require racket/runtime-path)
 
@@ -70,27 +71,20 @@
 		  (launch-bot-function b flags ...)))]))
 
 (define (launch-bot-function b #:persist [persist #f])
-  (when (not (discord-key))
+   (when (not (discord-key))
     (error "You need to specify your bot API key with the (discord-key) parameter"))
 
-  (define args 
+   (define args 
     (vector->list
-      (current-command-line-arguments)))
+     (current-command-line-arguments)))
 
+   (start-listening-server b)
 
-  (start-listening-server)
+   (copy-bot-runtime-to (current-directory) #:persist persist)
 
-  (if (empty? args)
-   (begin
-    (copy-bot-runtime-to (current-directory)
-#:persist persist)
-    (system "node bot/bot.js"))
+   (system "node bot/bot.js"))
 
-
-   ;Deprecated.  Running a bot now creates a Racket server that listens for stuff coming from bot.js via a socket, not via the command line anymore.
-   (command-line-bot b)))
-
-(define (start-listening-server)
+(define (start-listening-server b)
    (local-require racket/tcp)
 
    (thread
@@ -101,9 +95,18 @@
       (define-values [I O] (tcp-accept listener))
       (thread
        (λ()
-        (displayln "Got something")
-        (displayln (read I))
-        (close-output-port O)))
+        (define len (read I))
+        (define msg (string-trim (read-string (add1 len) I)))
+
+
+        (define resp (b msg))
+
+        (displayln (~a "Got from JS: " msg))
+        (displayln (~a "Sending to JS: " resp))
+        
+        (write (~a "Sup!\n") O)
+        (displayln "Sent")
+       ))
       (echo-server)))))
 
 
