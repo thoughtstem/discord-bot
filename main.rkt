@@ -1,6 +1,7 @@
 #lang at-exp racket 
 
 (provide 
+  ->discord-reply
   bot
   launch-bot
   discord-key
@@ -221,7 +222,7 @@
      (let ()
        (define name (~a (random 1000000) ".png"))
        (define path
-	 (build-path "bot" "data" name))
+        (build-path "bot" "data" name))
        (save-image reply path)
        (~a "FILE:" name))
      ] 
@@ -288,7 +289,7 @@
 
  ;Save to file and run...
  (define cmd.js
-   (~a "bot/cmd-" (random 1000) ".js"))
+   (~a "bot/cmd-" (random 1000000) ".js"))
 
  (with-output-to-file cmd.js
    (thunk*
