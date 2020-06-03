@@ -13,6 +13,7 @@
   messaging-user-name
   messaging-user-full-message
   messaging-user-id
+  messaging-user-id-override
   messaging-user-member-id
 
   session-store
@@ -317,19 +318,27 @@
 	"bot/data/" "")))
 
 ;Ugly atm
+
+(define messaging-user-id-override
+  (make-parameter #f))
+
 (define (messaging-user-id)
-  (define args 
-    (vector->list
+  (or
+   (messaging-user-id-override)
+   (let ()
+    (define args 
+     (vector->list
       (current-command-line-arguments)))
 
-  (if (empty? args)
-      "unknown-id"
-      (string-replace
-	(third ;id
-	  (string-split
-	    (first args)
-	    "-"))
-	".txt" "")))
+    (if (empty? args)
+     "unknown-id"
+     (string-replace
+      (third ;id
+       (string-split
+        (first args)
+        "-"))
+      ".txt" ""))
+   )))
 
 ;Ugly atm
 (define (messaging-user-member-id)
