@@ -144,22 +144,24 @@
 ;Message types
 
 (define (reaction-message?)
-  ;I guess I'm making an convention that file names carry semantic content.
-  ;  Would be nice to clean the JS/Racket comm pipeline up, but no time...
+ ;I guess I'm making an convention that file names carry semantic content.
+ ;  Would be nice to clean the JS/Racket comm pipeline up, but no time...
 
-  ;It's a reaction message if the file name is REACTION_***
+ ;It's a reaction message if the file name is REACTION_***
 
+ (and (current-message-name)
   (string-prefix? 
    (current-message-name)
-   "REACTION"))
+   "REACTION")))
 
 
 (define (current-message-name)
- (string-replace
-  (first
+ (with-handlers ([exn:fail? #f]) ;Fails in weird cases like when the bot function is called from the server.
+  (string-replace
+   (first
     (vector->list
      (current-command-line-arguments)))
-  "bot/data/" ""))
+   "bot/data/" "")))
 
 ;PARSING
 
