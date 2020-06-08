@@ -1,11 +1,49 @@
 const Discord = require('discord.js');
 const fs = require('fs');
-const client = new Discord.Client();
+const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] });
 const { exec } = require("child_process")
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
+
+client.on('messageReactionAdd', async (reaction, user) => {
+  var mi = reaction.message.id
+  var full = "REACTION_"+mi+".txt"
+
+  //I wish we could send the original message author id and/or the message content,
+  //  But we may not have that if it was sent before bot started
+  var data = JSON.stringify({
+    "message-id": mi,
+    "message": reaction.message,
+    "channel-id": reaction.message.channel.id,
+    "reactor-id": user.id,
+    "reactor": user
+  });
+
+  fs.writeFile("bot/data/"+full,
+    data,
+    function(err){
+      if(err) {
+        return console.log(err);
+      }
+
+      exec( "racket main.rkt " + "bot/data/" + full
+        , (error, stdout, stderr) => {
+
+          if (error) {
+            console.log(`error: ${error.message}`);
+            return;
+          }
+          if (stderr) {
+            console.log(`stderr: ${stderr}`);
+            return;
+          }
+          console.log(`stdout: ${stdout}`);
+        });
+
+    });
+})
 
 client.on('message', msg => {
 	if (msg.content.split("")[0] === config.prefix) {

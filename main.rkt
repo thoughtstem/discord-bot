@@ -1,6 +1,7 @@
 #lang at-exp racket 
 
 (provide 
+  log 
   ->discord-reply
   bot
   launch-bot
@@ -34,11 +35,20 @@
   id->mention
 
   ensure-messaging-user-has-role-on-server! 
+  user-has-role-on-server?
 
   get-users-from-channel
-  )
 
-(require racket/runtime-path)
+  on-reaction
+  (except-out (struct-out reaction) reaction-data)
+  (rename-out [ref-reaction-data reaction-data])
+
+  get-message-data 
+  send-message-on-channel
+)
+
+(require racket/runtime-path 
+         json)
 
 (define-runtime-path bot-runtime "js/bot")
 
@@ -65,26 +75,26 @@
 ;  e.g. racket bot.rkt would run the bot
 (require syntax/parse/define)
 (define-syntax (launch-bot stx)
-  (syntax-parse stx 
-    [(_ b flags ...)
-     #'(begin
-	 (module+ main
-		  (launch-bot-function b flags ...)))]))
+ (syntax-parse stx 
+  [(_ b flags ...)
+#'(begin
+  (module+ main
+   (launch-bot-function b flags ...)))]))
 
-(define (launch-bot-function b #:persist [persist #f])
-  (when (not (discord-key))
+  (define (launch-bot-function b #:persist [persist #f])
+   (when (not (discord-key))
     (error "You need to specify your bot API key with the (discord-key) parameter"))
 
-  (define args 
+   (define args 
     (vector->list
-      (current-command-line-arguments)))
+     (current-command-line-arguments)))
 
-  (if (empty? args)
-      (begin
-	(copy-bot-runtime-to (current-directory)
-			     #:persist persist)
-	(system "node bot/bot.js"))
-      (command-line-bot b)))
+   (if (empty? args)
+    (begin
+     (copy-bot-runtime-to (current-directory)
+#:persist persist)
+     (system "node bot/bot.js"))
+    (command-line-bot b)))
 
 
 ;Note: Storing the JS runtime in the user's working directory
@@ -131,6 +141,25 @@
 	    ))
 	))))
 
+;Message types
+
+(define (reaction-message?)
+  ;I guess I'm making an convention that file names carry semantic content.
+  ;  Would be nice to clean the JS/Racket comm pipeline up, but no time...
+
+  ;It's a reaction message if the file name is REACTION_***
+
+  (string-prefix? 
+   (current-message-name)
+   "REACTION"))
+
+
+(define (current-message-name)
+ (string-replace
+  (first
+    (vector->list
+     (current-command-line-arguments)))
+  "bot/data/" ""))
 
 ;PARSING
 
@@ -190,14 +219,14 @@
 
 ;Probably should be called run-bot
 (define (test-bot f msg)
-  (define reply
-    (with-handlers ([exn:fail? 
-		      (lambda (e)
-			(exn-message e)) ])
-		   (f msg)))
+ (define reply
+  (with-handlers ([exn:fail? 
+                  (lambda (e)
+                   (exn-message e)) ])
+   (f msg)))
 
 
-    (display (->discord-reply reply)))
+ (display (->discord-reply reply)))
 
 
 (define (->discord-reply reply)
@@ -234,11 +263,12 @@
     ))
 
 (define (command-line-bot b)
-  (test-bot b 
-	    (file->string
-	      (first
-		(vector->list
-		  (current-command-line-arguments))))))
+ (test-bot b 
+
+  (file->string
+   (first
+    (vector->list
+     (current-command-line-arguments))))))
 
 
 (define current-command (make-parameter #f))
@@ -251,24 +281,41 @@
 ;  For other bot, callbacks, we can use keywords to specify them.]
 ;[Consider making this a funciton, but making the bot rules a macro.]
 (define-syntax-rule (bot [cmd bound-func] ...)
-		    (let ()
-		      (define (f msg)
-			(define current-cmd (message->command msg))
-			(define args (message->args msg))
-			(define mentioned-bot (message->mentioned-bot msg))
+  (lambda (msg)
+     (cond 
+      [(reaction-message?) (handle-reaction-message msg)]
+      [else 
+      (let ()
+       (define current-cmd   (message->command msg))
+       (define args          (message->args msg))
+       (define mentioned-bot (message->mentioned-bot msg))
 
-			(parameterize ([messaging-user-full-message msg]
-				       [current-command current-cmd]
-				       [current-args args]
-				       [current-mentioned-bot mentioned-bot])
+       (parameterize ([messaging-user-full-message msg]
+                      [current-command current-cmd]
+                      [current-args args]
+                      [current-mentioned-bot mentioned-bot])
 
-			  (define current-bound-func
-			    (match current-cmd
-				   [cmd bound-func] ...))
+        (define current-bound-func
+         (match current-cmd
+          [cmd bound-func] ...))
 
-			  (apply current-bound-func args)))
+        (apply current-bound-func args)))])))
 
-			f))
+(struct reaction (data) #:transparent)
+
+(define (ref-reaction-data r key)
+  (hash-ref (reaction-data r) key))
+
+(define (handle-reaction-message data)
+  (raise 
+    (reaction (string->jsexpr data))))
+
+(define (on-reaction b f)
+ (lambda ( a . args) 
+  (with-handlers ([reaction?
+                  (lambda (r)
+                   (f r))])
+   (apply b a args))))
 
 (define (run-js . strings)
   (define program
@@ -374,9 +421,7 @@
   (if (and (not (void? default-value))
 	   (not (file-exists? key-file)))
       default-value
-      (read (open-input-file key-file)))
-  
-  )
+      (read (open-input-file key-file))))
 
 
 (define (session-clear username)
@@ -386,7 +431,46 @@
 			  #:must-exist? #f))
 
 
+(define (get-message-data mid cid)
+ (string->jsexpr
+  (with-output-to-string
+   (thunk*
+    @run-js{
+    client.channels.cache.get('@cid').messages.fetch('@mid').
+    then((m)=>{
+        console.log(JSON.stringify({
+              "content": m.content,
+              "author-id": m.member.id,
+              "author": {
+              "roles": m.member.roles.cache
+              .map((r)=>{
+                  return {"id": r.id, "name": r.name}
+              })
+            }
+         }))
+        client.destroy()
+        }) 
+    }))))
 
+(define (send-message-on-channel cid msg)
+ (log "send-message-on-channel")
+ (define ret
+  (string->jsexpr
+   (with-output-to-string
+    (thunk*
+     @run-js{
+     client.channels.cache.get('@cid').send(`@(->discord-reply msg)`.trim()).
+     then((m)=>{
+         client.destroy()
+         }) 
+     }))))
+
+ (log "finished: send-message-on-channel")
+
+ ret)
+
+
+;TODO: Rewrite this in terms of user-has-role-on-server?, which is more general
 (define (ensure-messaging-user-has-role-on-server! role-id server-id
 						   #:failure-message (failure-message "Insufficient Roles!"))
   (define s
@@ -419,6 +503,43 @@
   (when (string=? (string-trim s) "No Role Found")
     (error failure-message)))
 
+(define (user-has-role-on-server? user-id role-id server-id)
+  (log "user-has-role-on-server?")
+
+  (define ret
+  (read
+   (open-input-string
+    (with-output-to-string
+     (thunk
+      @run-js{
+      client.guilds
+      .resolve('@server-id').members
+      .fetch('@user-id')
+      .then(member => {
+          var role =
+          member.roles.cache.find(role => {
+              return role.id == '@role-id'	
+              })
+          if(role){
+          console.log(role.name) 
+          client.destroy()
+          } else {
+          console.log("#f") 
+          client.destroy()
+          }
+          })
+      .catch(err =>  {
+          console.log("#f") 
+          client.destroy()
+          })
+      })))))
+
+ 
+  (log "finished: user-has-role-on-server?")
+
+  ret)
+
+
 
 (define (get-users-from-channel voice-channel-id)
   (map id->mention
@@ -441,6 +562,19 @@
              }
              "\n")))))
 
+
+(define (log msg . stuff)
+  (define log-dir
+    (build-path "logs"))
+
+  (when (not (directory-exists? log-dir))
+    (make-directory* log-dir))
+
+  (with-output-to-file #:exists 'append
+    (build-path log-dir "log")
+    (thunk*
+      (writeln msg)
+      (map writeln stuff))))
 
 (module+ test
   (require rackunit) 
