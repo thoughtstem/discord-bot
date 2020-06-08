@@ -156,7 +156,7 @@
 
 
 (define (current-message-name)
- (with-handlers ([exn:fail? #f]) ;Fails in weird cases like when the bot function is called from the server.
+ (with-handlers ([exn:fail? (thunk* #f)]) ;Fails in weird cases like when the bot function is called from the server.
   (string-replace
    (first
     (vector->list
