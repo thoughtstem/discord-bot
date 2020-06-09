@@ -185,8 +185,12 @@
       #f))
 
 (define (message->command unparsed-msg)
-  (define msg-data (string->jsexpr unparsed-msg))
-  (define msg      (hash-ref msg-data 'cmd))
+  (define msg-data 
+    (with-handlers 
+      ([exn:fail? (thunk* unparsed-msg)])
+      (hash-ref (string->jsexpr unparsed-msg) 'cmd)))
+
+  (define msg   (if (string? msg-data) msg-data   (hash-ref msg-data 'cmd)))
 
   (define maybe-cmd
     (first (regexp-split #rx"[ \n]+" (string-trim msg))))
@@ -285,26 +289,36 @@
 ;[Basically it handles messages that get chatted at it.  
 ;  For other bot, callbacks, we can use keywords to specify them.]
 ;[Consider making this a funciton, but making the bot rules a macro.]
-(define-syntax-rule (bot [cmd bound-func] ...)
+(define-syntax-rule (bot [the-cmd bound-func] ...)
   (lambda (msg)
      (cond 
       [(reaction-message?) (handle-reaction-message msg)]
       [else 
       (let ()
-       (define current-cmd   (message->command msg))
-       (define args          (message->args msg))
-       (define mentioned-bot (message->mentioned-bot msg))
+	(log msg)
 
-       (parameterize ([messaging-user-full-message msg]
-                      [current-command current-cmd]
-                      [current-args args]
-                      [current-mentioned-bot mentioned-bot])
+	(define parsed-msg 
+	  (with-handlers ([exn:fail? (thunk* msg)])
+	    (hash-ref (string->jsexpr msg) 'cmd)))
 
-        (define current-bound-func
-         (match current-cmd
-          [cmd bound-func] ...))
+	(define current-cmd   (message->command       parsed-msg))
+	(define args          (message->args          parsed-msg))
+	(define mentioned-bot (message->mentioned-bot parsed-msg))
 
-        (apply current-bound-func args)))])))
+	(log current-cmd)
+	(log args)
+	(log mentioned-bot)
+
+	(parameterize ([messaging-user-full-message msg]
+		       [current-command current-cmd]
+		       [current-args args]
+		       [current-mentioned-bot mentioned-bot])
+
+		      (define current-bound-func
+			(match current-cmd
+			       [the-cmd bound-func] ...))
+
+		      (apply current-bound-func args)))])))
 
 (struct reaction (data) #:transparent)
 
