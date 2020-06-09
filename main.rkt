@@ -184,7 +184,10 @@
       (mention->id maybe-cmd) ; It is not a cmd, it is a mention 
       #f))
 
-(define (message->command msg)
+(define (message->command unparsed-msg)
+  (define msg-data (string->jsexpr unparsed-msg))
+  (define msg      (hash-ref msg-data 'cmd))
+
   (define maybe-cmd
     (first (regexp-split #rx"[ \n]+" (string-trim msg))))
 
@@ -359,12 +362,8 @@
 
   (if (empty? args)
       "unknown-user"
-      (string-replace
-	(first ;name
-	  (string-split
-	    (first args)
-	    "-"))
-	"bot/data/" "")))
+      (hash-ref (hash-ref (string->jsexpr (file->string (first args))) 'author) 'username)
+      ))
 
 ;Ugly atm
 
@@ -590,23 +589,23 @@
     '("1" "2" "3" "4" "5" "6"))
 
   (check-equal?
-    (message->command "try\n(circle 30 'solid 'red)")
+    (message->command "{\"cmd\": \"try\n(circle 30 'solid 'red)\"}")
     "try")
 
   (check-equal?
-    (message->command "try (circle 30 'solid 'red)")
+    (message->command "{\"cmd\": \"try (circle 30 'solid 'red)\"}")
     "try")
 
   (check-equal?
-    (message->command " try (circle 30 'solid 'red)")
+    (message->command "{\"cmd\": \"try (circle 30 'solid 'red)\"}")
     "try")
 
   (check-equal?
-    (message->command "<@!abc> try (circle 30 'solid 'red)")
+    (message->command "{\"cmd\": \"<@!abc> try (circle 30 'solid 'red)\"}")
     "try")
 
   (check-equal?
-    (message->command "<@!abc>    try (circle 30 'solid 'red)")
+    (message->command "{\"cmd\": \"<@!abc>    try (circle 30 'solid 'red)\"}")
     "try")
   )
 

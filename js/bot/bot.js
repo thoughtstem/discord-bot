@@ -54,9 +54,9 @@ client.on('message', msg => {
 		var d = msg.author.discriminator
 		var i = msg.author.id
 		var mi = msg.member ? msg.member.id : "NOT_A_MEMBER"
-		var full = u+"-"+d+"-"+i+"-"+mi+".txt"
+		var full = d+"-"+i+"-"+mi+".txt"
 		fs.writeFile("bot/data/"+full,
-			cmd,
+			JSON.stringify({"cmd": cmd, "author": {"username": u}}),
 			function(err){
 				if(err) {
 					return console.log(err);
