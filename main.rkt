@@ -296,7 +296,7 @@
       [(reaction-message?) (handle-reaction-message msg)]
       [else 
       (let ()
-	(log msg)
+	;(log msg)
 
 	(define parsed-msg 
 	  (with-handlers ([exn:fail? (thunk* msg)])
@@ -306,9 +306,9 @@
 	(define args          (message->args          parsed-msg))
 	(define mentioned-bot (message->mentioned-bot parsed-msg))
 
-	(log current-cmd)
-	(log args)
-	(log mentioned-bot)
+	;(log current-cmd)
+	;(log args)
+	;(log mentioned-bot)
 
 	(parameterize ([messaging-user-full-message msg]
 		       [current-command current-cmd]
@@ -475,7 +475,7 @@
     }))))
 
 (define (send-message-on-channel cid msg)
- (log "send-message-on-channel")
+ ;(log "send-message-on-channel")
  (define ret
   (string->jsexpr
    (with-output-to-string
@@ -487,7 +487,7 @@
          }) 
      }))))
 
- (log "finished: send-message-on-channel")
+ ;(log "finished: send-message-on-channel")
 
  ret)
 
@@ -526,7 +526,7 @@
     (error failure-message)))
 
 (define (user-has-role-on-server? user-id role-id server-id)
-  (log "user-has-role-on-server?")
+  ;(log "user-has-role-on-server?")
 
   (define ret
   (read
@@ -557,7 +557,7 @@
       })))))
 
  
-  (log "finished: user-has-role-on-server?")
+  ;(log "finished: user-has-role-on-server?")
 
   ret)
 
@@ -586,18 +586,17 @@
 
 
 (define (log msg . stuff)
-  #;(define log-dir
+  (define log-dir
     (build-path "logs"))
 
-  #;(when (not (directory-exists? log-dir))
+  (when (not (directory-exists? log-dir))
     (make-directory* log-dir))
 
-  #;(with-output-to-file #:exists 'append
+  (with-output-to-file #:exists 'append
     (build-path log-dir "log")
     (thunk*
       (writeln msg)
       (map writeln stuff)))
-  '()
   )
 
 (module+ test
