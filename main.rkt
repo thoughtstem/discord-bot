@@ -16,6 +16,7 @@
   messaging-user-id
   messaging-user-id-override
   messaging-user-member-id
+  messaging-user-member-id-override
 
   session-store
   session-load
@@ -384,6 +385,9 @@
 (define messaging-user-id-override
   (make-parameter #f))
 
+(define messaging-user-member-id-override
+  (make-parameter #f))
+
 (define (messaging-user-id)
   (or
    (messaging-user-id-override)
@@ -395,7 +399,7 @@
     (if (empty? args)
      "unknown-id"
      (string-replace
-      (third ;id
+      (first ;id
        (string-split
         (first args)
         "-"))
@@ -404,18 +408,21 @@
 
 ;Ugly atm
 (define (messaging-user-member-id)
-  (define args 
-    (vector->list
-      (current-command-line-arguments)))
+  (or
+    (messaging-user-member-id-override)
+    (let ()
+      (define args 
+	(vector->list
+	  (current-command-line-arguments)))
 
-  (if (empty? args)
-      "unknown-member-id"
-      (string-replace
-	(fourth ;member id
-	  (string-split
-	    (first args)
-	    "-"))
-	".txt" "")))
+      (if (empty? args)
+	"unknown-member-id"
+	(string-replace
+	  (third ;member id, is this third now?
+	    (string-split
+	      (first args)
+	      "-"))
+	  ".txt" "")))))
 
 ;STATE/SESSIONS
 
