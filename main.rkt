@@ -586,17 +586,19 @@
 
 
 (define (log msg . stuff)
-  (define log-dir
+  #;(define log-dir
     (build-path "logs"))
 
-  (when (not (directory-exists? log-dir))
+  #;(when (not (directory-exists? log-dir))
     (make-directory* log-dir))
 
-  (with-output-to-file #:exists 'append
+  #;(with-output-to-file #:exists 'append
     (build-path log-dir "log")
     (thunk*
       (writeln msg)
-      (map writeln stuff))))
+      (map writeln stuff)))
+  '()
+  )
 
 (module+ test
   (require rackunit) 
