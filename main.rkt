@@ -439,11 +439,16 @@
 (define (session-load username key [default-value (void)])
   (define key-file (build-path "bot" "data" username (~a key))) 
 
+  (define in (open-input-file key-file))
+
+  (define ret (read in))
+
+  (close-input-port in)
 
   (if (and (not (void? default-value))
 	   (not (file-exists? key-file)))
       default-value
-      (read (open-input-file key-file))))
+      ret))
 
 
 (define (session-clear username)
